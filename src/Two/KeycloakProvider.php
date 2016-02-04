@@ -25,7 +25,7 @@ class KeycloakProvider extends AbstractOwnProvider implements ProviderInterface
      */
     protected function getAuthUrl($state)
     {
-        return $this->buildAuthUrlFromBase($this->getBaseUrlWithRealm().'protocol/openid-connect/auth', $state);
+        return $this->buildAuthUrlFromBase($this->getBaseUrlWithRealm().'/protocol/openid-connect/auth', $state);
     }
 
     /**
