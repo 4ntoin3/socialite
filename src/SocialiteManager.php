@@ -27,6 +27,20 @@ class SocialiteManager extends Manager implements Contracts\Factory
      *
      * @return \Laravel\Socialite\Two\AbstractProvider
      */
+    protected function createKeycloakDriver()
+    {
+        $config = $this->app['config']['services.keycloak'];
+
+        return $this->buildOwnProvider(
+            'Laravel\Socialite\Two\KeycloakProvider', $config
+        );
+    }
+
+    /**
+     * Create an instance of the specified driver.
+     *
+     * @return \Laravel\Socialite\Two\AbstractProvider
+     */
     protected function createGithubDriver()
     {
         $config = $this->app['config']['services.github'];
@@ -89,6 +103,21 @@ class SocialiteManager extends Manager implements Contracts\Factory
     {
         return new $provider(
             $this->app['request'], $config['client_id'],
+            $config['client_secret'], $config['redirect']
+        );
+    }
+
+    /**
+     * Build an OAuth 2 provider instance.
+     *
+     * @param  string  $provider
+     * @param  array  $config
+     * @return \Laravel\Socialite\Two\AbstractProvider
+     */
+    public function buildOwnProvider($provider, $config)
+    {
+        return new $provider(
+            $this->app['request'], $config['authServerUrl'], $config['realm'], $config['client_id'],
             $config['client_secret'], $config['redirect']
         );
     }
