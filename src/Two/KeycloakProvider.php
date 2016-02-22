@@ -2,6 +2,8 @@
 
 namespace Laravel\Socialite\Two;
 
+use GuzzleHttp\ClientInterface;
+
 use Exception;
 
 class KeycloakProvider extends AbstractOwnProvider implements ProviderInterface
@@ -38,6 +40,26 @@ class KeycloakProvider extends AbstractOwnProvider implements ProviderInterface
         return $this->getBaseUrlWithRealm().'/protocol/openid-connect/token';
     }
 
+    public function getAccessToken($code)
+    {
+        $postKey = (version_compare(ClientInterface::VERSION, '6') === 1) ? 'form_params' : 'body';
+
+        $response = $this->getHttpClient()->post($this->getTokenUrl(), [
+            'headers' => ['Accept' => 'application/x-www-form-urlencoded'],
+            $postKey => $this->getTokenFields($code),
+        ]);
+
+        return $this->parseAccessToken($response->getBody());
+    }
+
+    public function getTokenFields($code)
+    {
+        return [
+            'client_id' => $this->clientId, 'client_secret' => $this->clientSecret,
+            'code' => $code, 'redirect_uri' => $this->redirectUrl, 'grant_type' => 'authorization_code',
+        ];
+    }
+
     /**
      * Get the raw user for the given access token.
      *
@@ -46,9 +68,14 @@ class KeycloakProvider extends AbstractOwnProvider implements ProviderInterface
      */
     protected function getUserByToken($token)
     {
+        $postKey = (version_compare(ClientInterface::VERSION, '6') === 1) ? 'form_params' : 'body';
+
         $userUrl = $this->getBaseUrlWithRealm().'/protocol/openid-connect/userinfo';
 
-        $response = $this->getHttpClient()->get($userUrl);
+        $response = $this->getHttpClient()->post($userUrl, [
+            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+            $postKey => ['access_token' => $token,],
+        ]);
 
         return json_decode($response->getBody(), true);
     }
@@ -62,7 +89,7 @@ class KeycloakProvider extends AbstractOwnProvider implements ProviderInterface
     protected function mapUserToObject(array $user)
     {
         return (new User)->setRaw($user)->map([
-            'id' => $user['id'], 'nickname' => $user['username'], 'name' => array_get($user, 'full name'),
+            'id' => $user['sub'], 'nickname' => $user['preferred_username'], 'name' => array_get($user, 'name'),
             'email' => array_get($user, 'email'),
         ]);
     }
